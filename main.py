@@ -1,5 +1,6 @@
 import pandas as pd
 import sklearn.preprocessing as preproccesing
+from sklearn.decomposition import PCA
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
@@ -9,6 +10,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
+import numpy as np
+import matplotlib.pyplot as plt
 
 cat_coulmns = ["Event_type", "Insurer_type", "Owner_region", "Owner_type", "Sales_channel", "VEH_aim_use", "VEH_model",
                "VEH_type_name"]
@@ -45,6 +48,11 @@ def show_metrics(y_test, y_pred):
 
 def compare_classifiers(X, Y, names, classifiers):
     X_train, X_test, y_train, y_test = train_test_split(X, Y, random_state=50)
+
+    # sklearn_pca = PCA(n_components=230)
+    # X_train = sklearn_pca.fit_transform(X_train)
+    # X_test = sklearn_pca.transform(X_test)
+
     for name, classifier in zip(names, classifiers):
         classifier.fit(X_train, y_train)
         y_pred = classifier.predict(X_test)
@@ -52,11 +60,36 @@ def compare_classifiers(X, Y, names, classifiers):
         show_metrics(y_test, y_pred)
         print()
 
+def feature_importance(X, Y, feature_names):
+    forest = RandomForestClassifier(random_state=42)
+    forest.fit(X, Y)
+    importances = forest.feature_importances_
+    std = np.std([tree.feature_importances_ for tree in forest.estimators_],
+                 axis=0)
+    indices = np.argsort(importances)[::-1]
+
+    # Print the feature ranking
+    print("Feature ranking:")
+
+    for f in range(X.shape[1]):
+        print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
+
+
+
+def pca(X):
+    pca = PCA().fit(X)
+    plt.plot(np.cumsum(pca.explained_variance_ratio_))
+    plt.xlim(0, 1000, 20)
+    plt.xlabel('Number of components')
+    plt.ylabel('Cumulative explained variance')
+    plt.show()
+
 
 def main():
     X, Y = read_data()
     X_norm = normalize_data(X)
     compare_classifiers(X_norm, Y, names, classifiers)
-
+    feature_importance(X_norm, Y, list(X))
+    pca(X_norm)
 
 main()
