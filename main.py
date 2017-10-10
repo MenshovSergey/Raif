@@ -18,13 +18,33 @@ cat_coulmns = ["Event_type", "Insurer_type", "Owner_region", "Owner_type", "Sale
                "VEH_type_name"]
 drop_columns = ["bad", "claim_id"]
 names = ["RandomForest", "GBM", "AdaBoost", "SVM", "Dummy"]
-classifiers = [RandomForestClassifier(random_state=42), GradientBoostingClassifier(random_state=42),
-               AdaBoostClassifier(random_state=42),
+classifiers = [RandomForestClassifier(random_state=42, n_estimators=100), GradientBoostingClassifier(random_state=42),
+               AdaBoostClassifier(random_state=42,n_estimators=100),
                svm.SVC(random_state=42), DummyClassifier(random_state=42)]
 
 THRESHOLD_VEH_MODEL = 10
 
 NEW_VEH_MODEL_NAME = "VEH_model_another"
+
+prefix_for_remove = ["VEH_model", "Owner_region"]
+thresholds = [30, 80]
+
+
+def union_columns(data, prefix, new_name, threshold):
+    small_columns = []
+    another = [0] * len(data.values)
+    for name_column in list(data):
+        if prefix in name_column:
+            values = list(data.get(name_column))
+            count = Counter(values)[1]
+            if count < threshold:
+                small_columns.append(name_column)
+                need_index = [i for i, x in enumerate(values) if x == 1]
+                for i in need_index:
+                    another[i] = 1        
+    data = data.drop(small_columns, 1)
+    data[new_name] = another
+    return data
 
 
 def read_data():
@@ -33,19 +53,8 @@ def read_data():
     y = data.get("bad")
     data = data.drop(drop_columns, 1)
     data = data.fillna(method='pad')
-    small_veh_models=[]
-    another = [0] * len(data.values)
-    for name_column in list(data):
-        if "VEH_model" in name_column:
-            values = list(data.get(name_column))
-            count = Counter(values)[1]
-            if count < THRESHOLD_VEH_MODEL:
-                small_veh_models.append(name_column)
-                need_index = [i for i, x in enumerate(values) if x == 1]
-                for i in need_index:
-                    another[i] = 1
-    data = data.drop(small_veh_models, 1)
-    data[NEW_VEH_MODEL_NAME] = another
+    for prefix, threshold in zip(prefix_for_remove, thresholds):
+        data = union_columns(data,prefix,prefix+"_another", threshold)
     return data, y
 
 
@@ -108,6 +117,6 @@ def main():
     X_norm = normalize_data(X)
     compare_classifiers(X_norm, Y, names, classifiers)
     feature_importance(X_norm, Y, list(X))
-    pca(X_norm)
+    # pca(X_norm)
 
 main()
