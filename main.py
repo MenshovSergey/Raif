@@ -13,6 +13,7 @@ from sklearn.metrics import accuracy_score
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import Counter
+import csv
 
 import random
 
@@ -105,11 +106,10 @@ def compare_classifiers(X, Y, names, classifiers):
 
 
 def feature_importance(X, Y, feature_names):
-    forest = RandomForestClassifier(random_state=42)
-    forest.fit(X, Y)
-    importances = forest.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in forest.estimators_],
-                 axis=0)
+    adabBoost = AdaBoostClassifier(random_state=42, n_estimators=100)
+    adabBoost.fit(X, Y)
+    importances = adabBoost.feature_importances_
+
     indices = np.argsort(importances)[::-1]
 
     # Print the feature ranking
@@ -122,11 +122,24 @@ def feature_importance(X, Y, feature_names):
 def pca(X):
     pca = PCA().fit(X)
     plt.plot(np.cumsum(pca.explained_variance_ratio_))
-    plt.xlim(0, 1000, 20)
+    plt.xlim(0, 200, 20)
     plt.xlabel('Number of components')
     plt.ylabel('Cumulative explained variance')
     plt.show()
 
+
+def get_stat(data):
+    res = {}
+    for v in data:
+        for i, p in enumerate(v):
+            if not i in res:
+                res[i] = Counter()
+            res[i].update([p])
+    return res
+
+def print_stat(f, stat):
+    for k, v in stat.items():
+        print(v,file=f)
 
 def main():
     X, Y, data_clean = read_data()
@@ -157,19 +170,47 @@ def main():
     print("Count object 1 = " + str(count_1))
 
     fp_indices = compare_classifiers(X_norm, Y, names, classifiers)
-    fp = open("fp","w")
-    target = open("target","w")
+    fp = open("fp", "w")
+    target = open("target", "w")
     target_values = list(data_clean.get("bad"))
+    target_set = set([])
+    fp_set = set([])
     data_clean = data_clean.drop(drop_columns, 1)
-    for i,v in enumerate(target_values):
+    target_full = []
+    for i, v in enumerate(target_values):
         if v == 1:
             print(str(data_clean.values[i]).replace("\n", ""), file=target)
+            target_set.update([str(data_clean.values[i]).replace("\n", "")])
+            target_full.append(data_clean.values[i])
+
+    stat_target = get_stat(target_full)
+
+    fp_full = []
     for i in fp_indices:
-        print(str(data_clean.values[indices[i]]).replace("\n",""), file=fp)
+        print(str(data_clean.values[indices[i]]).replace("\n", ""), file=fp)
+        fp_set.update([str(data_clean.values[indices[i]]).replace("\n", "")])
+        fp_full.append(data_clean.values[indices[i]])
+
+    fp_stat = get_stat(fp_full)
+
+    stat_target_f = open("stat_target","w")
+    stat_full_f = open("stat_fp","w")
+
+    print_stat(stat_target_f, stat_target)
+    print_stat(stat_full_f, fp_stat)
+    stat_target_f.close()
+    stat_full_f.close()
+
+    diff = open("target-fp", "w")
+    diff_set = target_set - fp_set
+    for t in diff_set:
+        print(t, file=diff)
+    diff.close()
+
     fp.close()
     target.close()
     feature_importance(X_norm, Y, list(X))
-    # pca(X_norm)
+    pca(X_norm)
 
 
 main()
