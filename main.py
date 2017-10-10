@@ -12,6 +12,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import Counter
 
 cat_coulmns = ["Event_type", "Insurer_type", "Owner_region", "Owner_type", "Sales_channel", "VEH_aim_use", "VEH_model",
                "VEH_type_name"]
@@ -21,6 +22,10 @@ classifiers = [RandomForestClassifier(random_state=42), GradientBoostingClassifi
                AdaBoostClassifier(random_state=42),
                svm.SVC(random_state=42), DummyClassifier(random_state=42)]
 
+THRESHOLD_VEH_MODEL = 10
+
+NEW_VEH_MODEL_NAME = "VEH_model_another"
+
 
 def read_data():
     data = pd.read_csv("data/all.csv", sep=';', decimal=",")
@@ -28,6 +33,19 @@ def read_data():
     y = data.get("bad")
     data = data.drop(drop_columns, 1)
     data = data.fillna(method='pad')
+    small_veh_models=[]
+    another = [0] * len(data.values)
+    for name_column in list(data):
+        if "VEH_model" in name_column:
+            values = list(data.get(name_column))
+            count = Counter(values)[1]
+            if count < THRESHOLD_VEH_MODEL:
+                small_veh_models.append(name_column)
+                need_index = [i for i, x in enumerate(values) if x == 1]
+                for i in need_index:
+                    another[i] = 1
+    data = data.drop(small_veh_models, 1)
+    data[NEW_VEH_MODEL_NAME] = another
     return data, y
 
 
