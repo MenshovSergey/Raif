@@ -1,21 +1,16 @@
+import random
+from collections import Counter
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import sklearn.preprocessing as preproccesing
 from sklearn.decomposition import PCA
-
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
-from sklearn import svm
-from sklearn.dummy import DummyClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
-from sklearn.metrics import accuracy_score
-import numpy as np
-import matplotlib.pyplot as plt
-from collections import Counter
-import csv
-
-import random
+from sklearn.model_selection import train_test_split
 
 cat_coulmns = ["Event_type", "Insurer_type", "Owner_region", "Owner_type", "Sales_channel", "VEH_aim_use", "VEH_model",
                "VEH_type_name"]
@@ -29,6 +24,8 @@ names = ["AdaBoost"]
 classifiers = [AdaBoostClassifier(random_state=42, n_estimators=100)]
 
 THRESHOLD_VEH_MODEL = 10
+THRESHOLD_FI = 0.0236
+COUNT = 63
 
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
@@ -104,6 +101,18 @@ def compare_classifiers(X, Y, names, classifiers):
         return get_FP(y_test, y_pred, indices_test)
         # print()
 
+def new_data(pos, importance, X):
+    i = len(pos) - 1
+    # while importance[pos[i]] < THRESHOLD_FI:
+    #     pos = np.delete(pos, i, 0)
+    #     i -= 1
+    # for i in range(len(pos) - 1, COUNT):
+    #     pos = np.delete(pos, i, 0)
+
+    A = np.ndarray((len(X), len(pos)))
+    for i in range(len(pos)):
+        A[:, i] = X[:, pos[i]]
+    return A
 
 def feature_importance(X, Y, feature_names):
     adabBoost = AdaBoostClassifier(random_state=42, n_estimators=100)
@@ -117,7 +126,8 @@ def feature_importance(X, Y, feature_names):
 
     for f in range(X.shape[1]):
         print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
-
+    A = new_data(indices, importances, X)
+    return A
 
 def pca(X):
     pca = PCA().fit(X)
@@ -169,7 +179,10 @@ def main():
     print("Count object 0 = " + str(count_0))
     print("Count object 1 = " + str(count_1))
 
-    fp_indices = compare_classifiers(X_norm, Y, names, classifiers)
+    A = feature_importance(X_norm, Y, list(X))
+    #print("A:", len(A[0]))
+    fp_indices = compare_classifiers(A, Y, names, classifiers)
+    #fp_indices2 = compare_classifiers(A, Y, names, classifiers)
     fp = open("fp", "w")
     target = open("target", "w")
     target_values = list(data_clean.get("bad"))
@@ -209,7 +222,6 @@ def main():
 
     fp.close()
     target.close()
-    feature_importance(X_norm, Y, list(X))
     pca(X_norm)
 
 
