@@ -26,16 +26,16 @@ classifiers = [AdaBoostClassifier(random_state=42, n_estimators=100)]
 THRESHOLD_VEH_MODEL = 10
 THRESHOLD_FI = 0.01
 THRESHOLD_DATA = 0.1
-COUNT = 47
+COUNT = 15
 
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
 prefix_for_remove = ["VEH_model"]
-prefix_for_remove2 = ["Owner_region"]
-factors = [["Москва", "Краснодарский край", "Московская область", "Новосибирская область"]]
-# factors = [["Москва", "Краснодарский край", "Московская область", "Новосибирская область"],
-#            ["MERCEDES","BMW","AUDI","OPEL","NISSAN","HONDA","ВАЗ","ДРУГОЕ ТС","TOYOTA","HYUNDAI","CITROEN","MITSUBISHI",
-#             "LAND","DAEWOO","MAZDA","VOLVO","FORD"]]
+prefix_for_remove2 = ["Owner_region","VEH_model"]
+# factors = [["Москва", "Краснодарский край", "Московская область","Новосибирская область",
+#             "Республика Татарстан (Татарстан)"]]
+factors = [["Москва", "Краснодарский край", "Московская область", "Новосибирская область"],
+           ["MERCEDES","BMW","AUDI","PORSCHE","LAND ROVER","LEXUS","INFINITI","CADILLAC","TOYOTA LAND CRUISER"]]
 thresholds = [30]
 
 
