@@ -24,13 +24,19 @@ names = ["AdaBoost"]
 classifiers = [AdaBoostClassifier(random_state=42, n_estimators=100)]
 
 THRESHOLD_VEH_MODEL = 10
-THRESHOLD_FI = 0.0236
-COUNT = 63
+THRESHOLD_FI = 0.01
+THRESHOLD_DATA = 0.1
+COUNT = 47
 
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
-prefix_for_remove = ["VEH_model", "Owner_region"]
-thresholds = [30, 80]
+prefix_for_remove = ["VEH_model"]
+prefix_for_remove2 = ["Owner_region"]
+factors = [["Москва", "Краснодарский край", "Московская область", "Новосибирская область"]]
+# factors = [["Москва", "Краснодарский край", "Московская область", "Новосибирская область"],
+#            ["MERCEDES","BMW","AUDI","OPEL","NISSAN","HONDA","ВАЗ","ДРУГОЕ ТС","TOYOTA","HYUNDAI","CITROEN","MITSUBISHI",
+#             "LAND","DAEWOO","MAZDA","VOLVO","FORD"]]
+thresholds = [30]
 
 
 def union_columns(data, prefix, new_name, threshold):
@@ -50,6 +56,28 @@ def union_columns(data, prefix, new_name, threshold):
     return data
 
 
+def union_columns2(data, prefix, new_name, main_names):
+    small_columns = []
+    another = [0] * len(data.values)
+    for name_column in list(data):
+        if prefix in name_column:
+            flag = False
+            for name in main_names:
+                if name in name_column:
+                    flag = True
+                    break
+            if not flag:
+                values = list(data.get(name_column))
+                small_columns.append(name_column)
+                need_index = [i for i, x in enumerate(values) if x == 1]
+                for i in need_index:
+                    another[i] = 1
+
+    data = data.drop(small_columns, 1)
+    data[new_name] = another
+    return data
+
+
 def read_data():
     data_clean = pd.read_csv("data/all.csv", sep=';', decimal=",")
     data = pd.get_dummies(data_clean, columns=cat_coulmns)
@@ -58,6 +86,9 @@ def read_data():
     data = data.fillna(method='pad')
     for prefix, threshold in zip(prefix_for_remove, thresholds):
         data = union_columns(data, prefix, prefix + "_another", threshold)
+
+    for prefix,factor_data in zip(prefix_for_remove2, factors):
+        data = union_columns2(data, prefix, prefix+"_another", factor_data)
     return data, y, data_clean
 
 
@@ -101,18 +132,21 @@ def compare_classifiers(X, Y, names, classifiers):
         return get_FP(y_test, y_pred, indices_test)
         # print()
 
+
 def new_data(pos, importance, X):
     i = len(pos) - 1
     # while importance[pos[i]] < THRESHOLD_FI:
     #     pos = np.delete(pos, i, 0)
     #     i -= 1
-    # for i in range(len(pos) - 1, COUNT):
-    #     pos = np.delete(pos, i, 0)
+    while i > COUNT:
+        pos = np.delete(pos, i, 0)
+        i -= 1
 
     A = np.ndarray((len(X), len(pos)))
     for i in range(len(pos)):
         A[:, i] = X[:, pos[i]]
     return A
+
 
 def feature_importance(X, Y, feature_names):
     adabBoost = AdaBoostClassifier(random_state=42, n_estimators=100)
@@ -128,6 +162,7 @@ def feature_importance(X, Y, feature_names):
         print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
     A = new_data(indices, importances, X)
     return A
+
 
 def pca(X):
     pca = PCA().fit(X)
@@ -147,9 +182,11 @@ def get_stat(data):
             res[i].update([p])
     return res
 
+
 def print_stat(f, stat):
     for k, v in stat.items():
-        print(v,file=f)
+        print(v, file=f)
+
 
 def main():
     X, Y, data_clean = read_data()
@@ -163,7 +200,7 @@ def main():
     random.seed(42)
     indices = []
     for i, v in enumerate(Y):
-        if v == 0 and random.random() < 0.4:
+        if v == 0 and random.random() < THRESHOLD_DATA:
             X_norm_cut.append(X_norm[i])
             Y_cut.append(0)
             count_0 += 1
@@ -180,9 +217,9 @@ def main():
     print("Count object 1 = " + str(count_1))
 
     A = feature_importance(X_norm, Y, list(X))
-    #print("A:", len(A[0]))
+    print("A:", len(A[0]))
     fp_indices = compare_classifiers(A, Y, names, classifiers)
-    #fp_indices2 = compare_classifiers(A, Y, names, classifiers)
+    # fp_indices2 = compare_classifiers(A, Y, names, classifiers)
     fp = open("fp", "w")
     target = open("target", "w")
     target_values = list(data_clean.get("bad"))
@@ -206,8 +243,8 @@ def main():
 
     fp_stat = get_stat(fp_full)
 
-    stat_target_f = open("stat_target","w")
-    stat_full_f = open("stat_fp","w")
+    stat_target_f = open("stat_target", "w")
+    stat_full_f = open("stat_fp", "w")
 
     print_stat(stat_target_f, stat_target)
     print_stat(stat_full_f, fp_stat)
@@ -222,7 +259,7 @@ def main():
 
     fp.close()
     target.close()
-    pca(X_norm)
+    # pca(X_norm)
 
 
 main()
