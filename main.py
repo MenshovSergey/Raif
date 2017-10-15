@@ -31,11 +31,10 @@ COUNT = 25
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
 prefix_for_remove = ["VEH_model"]
-prefix_for_remove2 = ["Owner_region","VEH_model"]
+prefix_for_remove2 = ["VEH_model"]
 # factors = [["Москва", "Краснодарский край", "Московская область","Новосибирская область",
 #             "Республика Татарстан (Татарстан)"]]
-factors = [["Москва", "Краснодарский край", "Московская область", "Новосибирская область"],
-           ["MERCEDES","BMW","AUDI","PORSCHE","LAND ROVER","LEXUS","INFINITI","CADILLAC","TOYOTA LAND CRUISER"]]
+factors = [["MERCEDES","BMW","AUDI","PORSCHE","LAND ROVER","LEXUS","INFINITI","CADILLAC","TOYOTA LAND CRUISER"]]
 thresholds = [30]
 
 
@@ -77,6 +76,14 @@ def union_columns2(data, prefix, new_name, main_names):
     data[new_name] = another
     return data
 
+def union_data(data):
+    for prefix, threshold in zip(prefix_for_remove, thresholds):
+        data = union_columns(data, prefix, prefix + "_another", threshold)
+
+    for prefix, factor_data in zip(prefix_for_remove2, factors):
+        data = union_columns2(data, prefix, prefix+"_another", factor_data)
+    return data
+
 
 def read_data():
     data_clean = pd.read_csv("data/all.csv", sep=';', decimal=",")
@@ -84,11 +91,6 @@ def read_data():
     y = data.get("bad")
     data = data.drop(drop_columns, 1)
     data = data.fillna(method='pad')
-    for prefix, threshold in zip(prefix_for_remove, thresholds):
-        data = union_columns(data, prefix, prefix + "_another", threshold)
-
-    for prefix,factor_data in zip(prefix_for_remove2, factors):
-        data = union_columns2(data, prefix, prefix+"_another", factor_data)
     return data, y, data_clean
 
 
@@ -182,7 +184,6 @@ def get_stat(data):
             res[i].update([p])
     return res
 
-
 def print_stat(f, stat):
     for k, v in stat.items():
         print(v, file=f)
@@ -190,7 +191,7 @@ def print_stat(f, stat):
 
 def main():
     X, Y, data_clean = read_data()
-
+    X = union_data(X)
     X_norm = normalize_data(X)
     X_norm_cut = []
     Y = list(Y)
@@ -262,4 +263,4 @@ def main():
     # pca(X_norm)
 
 
-main()
+# main()
