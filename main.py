@@ -26,7 +26,7 @@ classifiers = [AdaBoostClassifier(random_state=42, n_estimators=100)]
 THRESHOLD_VEH_MODEL = 10
 THRESHOLD_FI = 0.01
 THRESHOLD_DATA = 0.1
-COUNT = 15
+COUNT = 25
 
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
