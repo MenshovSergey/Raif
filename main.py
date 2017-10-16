@@ -31,10 +31,11 @@ COUNT = 25
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
 prefix_for_remove = ["VEH_model"]
-prefix_for_remove2 = ["VEH_model"]
+prefix_for_remove2 = ["Owner_region", "VEH_model"]
 # factors = [["Москва", "Краснодарский край", "Московская область","Новосибирская область",
 #             "Республика Татарстан (Татарстан)"]]
-factors = [["MERCEDES","BMW","AUDI","PORSCHE","LAND ROVER","LEXUS","INFINITI","CADILLAC","TOYOTA LAND CRUISER"]]
+factors = [['Ростовская область', 'Москва', 'Волгоградская область', 'Челябинская область', 'Краснодарский край'],
+           ["MERCEDES","BMW","AUDI","PORSCHE","LAND ROVER","LEXUS","INFINITI","CADILLAC","TOYOTA LAND CRUISER"]]
 thresholds = [30]
 
 
@@ -72,9 +73,9 @@ def union_columns2(data, prefix, new_name, main_names):
                 for i in need_index:
                     another[i] = 1
 
-    data = data.drop(small_columns, 1)
-    data[new_name] = another
-    return data
+    res = data.drop(small_columns, 1)
+    res[new_name] = another
+    return res
 
 def union_data(data):
     for prefix, threshold in zip(prefix_for_remove, thresholds):
@@ -158,10 +159,10 @@ def feature_importance(X, Y, feature_names):
     indices = np.argsort(importances)[::-1]
 
     # Print the feature ranking
-    print("Feature ranking:")
+    # print("Feature ranking:")
 
-    for f in range(X.shape[1]):
-        print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
+    # for f in range(X.shape[1]):
+    #     print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
     A = new_data(indices, importances, X)
     return A
 
@@ -192,7 +193,8 @@ def print_stat(f, stat):
 def main():
     X, Y, data_clean = read_data()
     X = union_data(X)
-    X_norm = normalize_data(X)
+    # X_norm = X.values
+    # X_norm = normalize_data(X)
     X_norm_cut = []
     Y = list(Y)
     Y_cut = []
@@ -200,24 +202,29 @@ def main():
     count_1 = 0
     random.seed(42)
     indices = []
+    remove_indices = []
     for i, v in enumerate(Y):
         if v == 0 and random.random() < THRESHOLD_DATA:
-            X_norm_cut.append(X_norm[i])
+            # X_norm_cut.append(X_norm[i])
             Y_cut.append(0)
             count_0 += 1
             indices.append(i)
         elif v == 1:
-            X_norm_cut.append(X_norm[i])
+            # X_norm_cut.append(X_norm[i])
             Y_cut.append(1)
             count_1 += 1
             indices.append(i)
+        else:
+            remove_indices.append(i)
     Y = Y_cut
-    X_norm = np.asarray(X_norm_cut)
+    X_norm = X.drop(X.index[remove_indices])
+    X_norm.to_csv("union_filter.csv",sep=",")
 
     print("Count object 0 = " + str(count_0))
     print("Count object 1 = " + str(count_1))
 
-    A = feature_importance(X_norm, Y, list(X))
+    A = union_columns2(X_norm,prefix_for_remove2[0], prefix_for_remove2[0]+"_another", factors[0])
+    A = feature_importance(A.values, Y, list(A))
     print("A:", len(A[0]))
     fp_indices = compare_classifiers(A, Y, names, classifiers)
     # fp_indices2 = compare_classifiers(A, Y, names, classifiers)
@@ -263,4 +270,4 @@ def main():
     # pca(X_norm)
 
 
-# main()
+main()
