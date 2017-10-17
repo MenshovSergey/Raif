@@ -44,7 +44,7 @@ def show_metrics(y_test, y_pred):
     print("Confusion matrix")
     print(confusion_matrix(y_test, y_pred))
     arr = f1_score(y_test, y_pred, average=None)
-    return arr[1]
+    return arr[0]
 
 
 def union_columns2(data, prefix, new_name, main_names):
