@@ -34,8 +34,8 @@ prefix_for_remove = ["VEH_model"]
 prefix_for_remove2 = ["Owner_region","VEH_model"]
 # factors = [["Москва", "Краснодарский край", "Московская область","Новосибирская область",
 #             "Республика Татарстан (Татарстан)"]]
-factors = [["Москва", "Краснодарский край", "Московская область", "Новосибирская область"],
-           ["MERCEDES","BMW","AUDI","PORSCHE","LAND ROVER","LEXUS","INFINITI","CADILLAC","TOYOTA LAND CRUISER"]]
+factors = [['Ростовская область', 'Москва', 'Волгоградская область', 'Челябинская область', 'Краснодарский край'],
+           ['MERCEDES', 'BMW', 'AUDI']]
 thresholds = [30]
 
 
@@ -73,10 +73,49 @@ def union_columns2(data, prefix, new_name, main_names):
                 for i in need_index:
                     another[i] = 1
 
-    data = data.drop(small_columns, 1)
-    data[new_name] = another
+    res = data.drop(small_columns, 1)
+    res[new_name] = another
+    return res
+
+
+def union_data(data):
+    for prefix, threshold in zip(prefix_for_remove, thresholds):
+        data = union_columns(data, prefix, prefix + "_another", threshold)
+
+    for prefix, factor_data in zip(prefix_for_remove2, factors):
+        data = union_columns2(data, prefix, prefix+"_another", factor_data)
     return data
 
+
+def union_columns3(data, prefix, new_name, main_names):
+    another0 = [0] * len(data.values)
+    another1 = [0] * len(data.values)
+    drop_pos = []
+    for name_column in list(data):
+        if prefix in name_column:
+            drop_pos.append(name_column)
+            flag = 0
+            for name in main_names:
+                if name in name_column:
+                    flag = 1
+                    break
+            val = list(data.get(name_column))
+            need = [i for i, x in enumerate(val) if x == 1]
+            if flag == 1:
+                for i in need:
+                    another1[i] = 1
+            else:
+                for i in need:
+                    another0[i] = 1
+    #print(len(another0), " ", sum(another0))
+    #print(len(another1), " ", sum(another1))
+    #print("...")
+    res = data.drop(drop_pos, 1)
+    new_name0 = new_name + "0"
+    res[new_name0] = another0
+    new_name1 = new_name + "1"
+    res[new_name1] = another1
+    return res
 
 def read_data():
     data_clean = pd.read_csv("data/all.csv", sep=';', decimal=",")
@@ -84,11 +123,6 @@ def read_data():
     y = data.get("bad")
     data = data.drop(drop_columns, 1)
     data = data.fillna(method='pad')
-    for prefix, threshold in zip(prefix_for_remove, thresholds):
-        data = union_columns(data, prefix, prefix + "_another", threshold)
-
-    for prefix,factor_data in zip(prefix_for_remove2, factors):
-        data = union_columns2(data, prefix, prefix+"_another", factor_data)
     return data, y, data_clean
 
 

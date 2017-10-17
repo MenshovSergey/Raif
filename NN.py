@@ -9,7 +9,8 @@ from keras.utils import np_utils
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import train_test_split
 
-from main import read_data, normalize_data, THRESHOLD_DATA, feature_importance, COUNT, get_FP
+from main import read_data, normalize_data, THRESHOLD_DATA, feature_importance, COUNT, get_FP, union_columns2, \
+    prefix_for_remove2, union_columns3, factors, union_data
 
 
 def baseline_model():
@@ -35,37 +36,6 @@ def baseline_model():
 
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy',metrics.binary_accuracy])
     return model
-
-def get_data():
-    X, Y, data_clean = read_data()
-
-    X_norm = normalize_data(X)
-    X_norm_cut = []
-    Y = list(Y)
-    Y_cut = []
-    count_0 = 0
-    count_1 = 0
-    random.seed(42)
-    indices = []
-    for i, v in enumerate(Y):
-        if v == 0 and random.random() < THRESHOLD_DATA:
-            X_norm_cut.append(X_norm[i])
-            Y_cut.append(0)
-            count_0 += 1
-            indices.append(i)
-        elif v == 1:
-            X_norm_cut.append(X_norm[i])
-            Y_cut.append(1)
-            count_1 += 1
-            indices.append(i)
-    Y = Y_cut
-    X_norm = np.asarray(X_norm_cut)
-
-    print("Count object 0 = " + str(count_0))
-    print("Count object 1 = " + str(count_1))
-
-    A = feature_importance(X_norm, Y, list(X))
-    return A, Y, range(len(Y))
 
 def get_FP_local(y_test, y_pred):
     res = []
