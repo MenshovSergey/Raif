@@ -1,18 +1,20 @@
 import random
-
-from keras import metrics
-from keras.layers import Dense, Dropout
-from keras.models import Sequential
 import numpy as np
+from keras import metrics
+from keras.layers import Dense, Dropout, BatchNormalization
+
+from keras.models import Sequential, model_from_json
+
 from keras.utils import np_utils
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import train_test_split
 
-from main import read_data, normalize_data, THRESHOLD_DATA, feature_importance, COUNT
+from main import read_data, normalize_data, THRESHOLD_DATA, feature_importance, COUNT, get_FP
 
 
 def baseline_model():
     # create model
+    np.random.seed(42)
     model = Sequential()
 
     model.add(Dense(3000, input_dim=COUNT+1, activation='relu', kernel_initializer='he_uniform'))
@@ -34,7 +36,7 @@ def baseline_model():
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy',metrics.binary_accuracy])
     return model
 
-def main():
+def get_data():
     X, Y, data_clean = read_data()
 
     X_norm = normalize_data(X)
@@ -63,14 +65,50 @@ def main():
     print("Count object 1 = " + str(count_1))
 
     A = feature_importance(X_norm, Y, list(X))
+    return A, Y, range(len(Y))
+
+def get_FP_local(y_test, y_pred):
+    res = []
+    for i, (y_t, y_p) in enumerate(zip(y_test, y_pred)):
+        if y_p == 0 and y_t == 1:
+            res.append(i)
+    return res
+
+def test_loaded_model():
+    json_file = open('nn_50.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_model_json)
+    loaded_model.load_weights("model_50.h5")
+    A, Y, indices = get_data()
+    X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(A, Y, indices, random_state=50,
+                                                                                     test_size=0.3)
+    res = loaded_model.predict_proba(X_test)
+    y_pred = loaded_model.predict_classes(X_test)
+    fp = get_FP(y_test, y_pred,indices_test)
+    res_f = open("result.out", "w")
+    print(fp, file=res_f)
+    fp = get_FP_local(y_test, y_pred)
+    for i in fp:
+        print (res[i])
+
+
+def main():
+    A, Y, indices = get_data()
     model = baseline_model()
     X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(A, Y, indices, random_state=50,
                                                                                      test_size=0.3)
     dummy_y = np_utils.to_categorical(y_train, 2)
     dummy_y_test = np_utils.to_categorical(y_test, 2)
-    model.fit(X_train, dummy_y, batch_size=128, shuffle=True, epochs=50, validation_split=0.1)
+    model.fit(X_train, dummy_y, batch_size=50, epochs=50, validation_split=0.1)
     print(model.evaluate(X_test, dummy_y_test))
     y_pred =model.predict_classes(X_test)
+
+    fp = get_FP(y_test,y_pred, indices_test)
+    res = open("result.out","w")
+    print(fp,file=res)
+    res.close()
+
     print("\n")
     print(confusion_matrix(y_test, y_pred))
     print("\n")
@@ -78,10 +116,11 @@ def main():
 
 
     model_json = model.to_json()
-    with open("nn.json", "w") as json_file:
+    with open("nn_50.json", "w") as json_file:
         json_file.write(model_json)
     # serialize weights to HDF5
-    model.save_weights("model.h5")
+    model.save_weights("model_50.h5")
     print("Saved model to disk")
 
-main()
+# main()
+# test_loaded_model()
