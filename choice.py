@@ -25,13 +25,13 @@ def rec(k, j, X, Y):
         for i in range(len(factors[k])):
             if effect[i] > 0:
                 new.append(factors[k][i])
-        A = union_columns2(X, prefix_for_remove2[k], prefix_for_remove2[k] + "_another", new)
+        A = union_columns3(X, prefix_for_remove2[k], prefix_for_remove2[k] + "_another", new)
         A = feature_importance(A.values, Y, list(A))
         accuracy = compare_classifiers(A, Y, names, classifiers)
         global res
         if accuracy > res:
             res = accuracy
-            print(res)
+            #print(res)
             global best_city
             best_city = new
     else:
@@ -68,6 +68,35 @@ def union_columns2(data, prefix, new_name, main_names):
     res[new_name] = another
     return res
 
+def union_columns3(data, prefix, new_name, main_names):
+    another0 = [0] * len(data.values)
+    another1 = [0] * len(data.values)
+    drop_pos = []
+    for name_column in list(data):
+        if prefix in name_column:
+            drop_pos.append(name_column)
+            flag = 0
+            for name in main_names:
+                if name in name_column:
+                    flag = 1
+                    break
+            val = list(data.get(name_column))
+            need = [i for i, x in enumerate(val) if x == 1]
+            if flag == 1:
+                for i in need:
+                    another1[i] = 1
+            else:
+                for i in need:
+                    another0[i] = 1
+    #print(len(another0), " ", sum(another0))
+    #print(len(another1), " ", sum(another1))
+    #print("...")
+    res = data.drop(drop_pos, 1)
+    new_name0 = new_name + "0"
+    res[new_name0] = another0
+    new_name1 = new_name + "1"
+    res[new_name1] = another1
+    return res
 
 
 def compare_classifiers(X, Y, names, classifiers):
@@ -106,10 +135,12 @@ def main():
     #print("Count object 1 = " + str(count_1))
 
     # A = feature_importance(X_norm, Y, list(X))
+    cities = ['Ростовская область', 'Москва', 'Волгоградская область', 'Челябинская область', 'Краснодарский край']
+    X2 = union_columns2(X_norm, prefix_for_remove2[0], prefix_for_remove2[0] + "_another", cities)
     #print("A:", len(A[0]))
     global effect
-    effect = [0] * len(factors[0])
-    rec(0, 0, X_norm, Y)
+    effect = [0] * len(factors[1])
+    rec(1, 0, X2, Y)
     print(res)
     print(best_city)
 
