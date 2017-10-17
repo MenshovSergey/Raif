@@ -4,6 +4,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pickle
 import sklearn.preprocessing as preproccesing
 from sklearn.decomposition import PCA
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
@@ -27,6 +28,7 @@ THRESHOLD_VEH_MODEL = 10
 THRESHOLD_FI = 0.01
 THRESHOLD_DATA = 0.1
 COUNT = 25
+CUT_POINT = [0, 0.04, 0.07, 1]
 
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
@@ -117,6 +119,34 @@ def union_columns3(data, prefix, new_name, main_names):
     res[new_name1] = another1
     return res
 
+def union_agents(data):
+    drop_pos = []
+    prefix = "Policy_agent_cat"
+    for name_column in list(data):
+        if prefix in name_column:
+            drop_pos.append(name_column)
+            val = list(data.get(name_column))
+            i = 0
+            another = [[0] * len(val)] * (len(CUT_POINT) - 1)
+            for coef in val:
+                for k in range(len(CUT_POINT) - 1):
+                    if CUT_POINT[k] <= coef < CUT_POINT[k + 1]:
+                        #val[i] = k
+                        another[k][i] = 1
+                        break
+                i += 1
+            data = data.drop(name_column, 1)
+            for i in range(len(another)):
+                data["Policy_agent_cat" + str(i)] = another[i]
+            # data["Policy_agent_cat_new"] = val
+            break
+    return data
+
+def save(model):
+    f = open("ada","wb")
+    pickle.dump(model, f)
+    f.close()
+
 def read_data():
     data_clean = pd.read_csv("data/all.csv", sep=';', decimal=",")
     data = pd.get_dummies(data_clean, columns=cat_coulmns)
@@ -160,6 +190,11 @@ def compare_classifiers(X, Y, names, classifiers):
 
     for name, classifier in zip(names, classifiers):
         classifier.fit(X_train, y_train)
+        save(classifier)
+        y_pred = classifier.predict(X_test)
+        print(name)
+        show_metrics(y_test, y_pred)
+        classifier=pickle.load(open("ada",'rb'))
         y_pred = classifier.predict(X_test)
         print(name)
         show_metrics(y_test, y_pred)
@@ -190,10 +225,10 @@ def feature_importance(X, Y, feature_names):
     indices = np.argsort(importances)[::-1]
 
     # Print the feature ranking
-    # print("Feature ranking:")
+    print("Feature ranking:")
 
-    # for f in range(X.shape[1]):
-    #     print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
+    for f in range(X.shape[1]):
+        print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
     A = new_data(indices, importances, X)
     return A
 
@@ -205,7 +240,6 @@ def pca(X):
     plt.xlabel('Number of components')
     plt.ylabel('Cumulative explained variance')
     plt.show()
-
 
 def get_stat(data):
     res = {}
@@ -220,13 +254,9 @@ def print_stat(f, stat):
     for k, v in stat.items():
         print(v, file=f)
 
-
-def main():
+def get_data():
     X, Y, data_clean = read_data()
     X = union_data(X)
-    # X_norm = X.values
-    # X_norm = normalize_data(X)
-    X_norm_cut = []
     Y = list(Y)
     Y_cut = []
     count_0 = 0
@@ -256,50 +286,63 @@ def main():
 
     A = union_columns2(X_norm,prefix_for_remove2[0], prefix_for_remove2[0]+"_another", factors[0])
     A = union_columns3(A, prefix_for_remove2[1], prefix_for_remove2[1]+"_another_car", factors[1])
+    #A = union_agents(A)
     A = feature_importance(A.values, Y, list(A))
+    return A, Y, range(len(Y))
+
+
+def main():
+    A, Y, _ = get_data()
     print("A:", len(A[0]))
     fp_indices = compare_classifiers(A, Y, names, classifiers)
+    result = open("result.out", "w")
+    print(fp_indices, file=result)
+    result.close()
     # fp_indices2 = compare_classifiers(A, Y, names, classifiers)
-    fp = open("fp", "w")
-    target = open("target", "w")
-    target_values = list(data_clean.get("bad"))
-    target_set = set([])
-    fp_set = set([])
-    data_clean = data_clean.drop(drop_columns, 1)
-    target_full = []
-    for i, v in enumerate(target_values):
-        if v == 1:
-            print(str(data_clean.values[i]).replace("\n", ""), file=target)
-            target_set.update([str(data_clean.values[i]).replace("\n", "")])
-            target_full.append(data_clean.values[i])
-
-    stat_target = get_stat(target_full)
-
-    fp_full = []
-    for i in fp_indices:
-        print(str(data_clean.values[indices[i]]).replace("\n", ""), file=fp)
-        fp_set.update([str(data_clean.values[indices[i]]).replace("\n", "")])
-        fp_full.append(data_clean.values[indices[i]])
-
-    fp_stat = get_stat(fp_full)
-
-    stat_target_f = open("stat_target", "w")
-    stat_full_f = open("stat_fp", "w")
-
-    print_stat(stat_target_f, stat_target)
-    print_stat(stat_full_f, fp_stat)
-    stat_target_f.close()
-    stat_full_f.close()
-
-    diff = open("target-fp", "w")
-    diff_set = target_set - fp_set
-    for t in diff_set:
-        print(t, file=diff)
-    diff.close()
-
-    fp.close()
-    target.close()
-    # pca(X_norm)
+    # fp = open("fp", "w")
+    # target = open("target", "w")
+    # target_values = list(data_clean.get("bad"))
+    # target_set = set([])
+    # fp_set = set([])
+    # data_clean = data_clean.drop(drop_columns, 1)
+    # target_full = []
+    # for i, v in enumerate(target_values):
+    #     if v == 1:
+    #         print(str(data_clean.values[i]).replace("\n", ""), file=target)
+    #         target_set.update([str(data_clean.values[i]).replace("\n", "")])
+    #         target_full.append(data_clean.values[i])
+    #
+    # stat_target = get_stat(target_full)
+    #
+    # fp_full = []
+    # fp_ind = []
+    # for i in fp_indices:
+    #     print(str(data_clean.values[indices[i]]).replace("\n", ""), file=fp)
+    #     fp_set.update([str(data_clean.values[indices[i]]).replace("\n", "")])
+    #     fp_full.append(data_clean.values[indices[i]])
+    #     fp_ind.append(data_clean.indices[i])
+    #
+    # fp_stat = get_stat(fp_full)
+    #
+    # stat_target_f = open("stat_target", "w")
+    # stat_full_f = open("stat_fp", "w")
+    #
+    # print_stat(stat_target_f, stat_target)
+    # # for k, v in fp_stat.items():
+    # #     print(fpv, file = stat_full_f)
+    # # print_stat(, fp_stat)
+    # stat_target_f.close()
+    # stat_full_f.close()
+    #
+    # diff = open("target-fp", "w")
+    # diff_set = target_set - fp_set
+    # for t in diff_set:
+    #     print(t, file=diff)
+    # diff.close()
+    #
+    # fp.close()
+    # target.close()
+    # # pca(X_norm)
 
 
 main()
