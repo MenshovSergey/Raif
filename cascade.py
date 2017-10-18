@@ -27,24 +27,28 @@ def show_res(name, y_test, y_res):
     print("\n")
     print("F1 measure : " + str(f1_score(y_test, y_res, average=None)))
 
-def cascade(c1,w, c2):
+def cascade(c1,w, c2, c3):
     nn = load_nn(c1, w)
     classifier=load_classifier(c2)
+    classifier_0=load_classifier(c3)
     A,Y,indices = get_data()
     X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(A, Y, indices, random_state=50,
                                                                                      test_size=0.3)
     y_pred_nn = nn.predict_classes(X_test)
     y_pred_cl = classifier.predict(X_test)
+    y_pred_cl_0 = classifier_0.predict(X_test)
     show_res("adaboost", y_test, y_pred_cl)
     show_res("neural network", y_test, y_pred_nn)
     y_res = []
     for i in range(len(y_pred_nn)):
-        if y_pred_nn[i] == 1 or y_pred_cl[i] == 1:
+        if y_pred_cl_0[i]==0 and y_pred_nn[i]==0 and y_pred_cl[i]==0:
+            y_res.append(0)
+        elif y_pred_nn[i] == 1 or y_pred_cl[i] == 1:
             y_res.append(1)
         else:
-            y_res.append(0)
+            y_res.append(1)
 
     show_res("merge", y_test, y_res)
 
 
-cascade("nn_50.json","model_50.h5","ada")
+cascade("nn_50.json","model_50.h5","ada","ada0")
