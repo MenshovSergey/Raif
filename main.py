@@ -202,7 +202,8 @@ def compare_classifiers(X, Y, names, classifiers):
         # print()
 
 
-def new_data(pos, importance, X):
+def new_data(pos, feature_names, X):
+    res_feature_names = []
     i = len(pos) - 1
     # while importance[pos[i]] < THRESHOLD_FI:
     #     pos = np.delete(pos, i, 0)
@@ -214,7 +215,8 @@ def new_data(pos, importance, X):
     A = np.ndarray((len(X), len(pos)))
     for i in range(len(pos)):
         A[:, i] = X[:, pos[i]]
-    return A
+        res_feature_names.append(feature_names[pos[i]])
+    return A, res_feature_names
 
 
 def feature_importance(X, Y, feature_names):
@@ -229,8 +231,8 @@ def feature_importance(X, Y, feature_names):
 
     for f in range(X.shape[1]):
         print("%d. feature %s (%f)" % (f + 1, feature_names[indices[f]], importances[indices[f]]))
-    A = new_data(indices, importances, X)
-    return A
+    A, new_f_names = new_data(indices, feature_names, X)
+    return A, new_f_names
 
 
 def pca(X):
@@ -287,16 +289,20 @@ def get_data():
     A = union_columns2(X_norm,prefix_for_remove2[0], prefix_for_remove2[0]+"_another", factors[0])
     A = union_columns3(A, prefix_for_remove2[1], prefix_for_remove2[1]+"_another_car", factors[1])
     #A = union_agents(A)
-    A = feature_importance(A.values, Y, list(A))
-    return A, Y, range(len(Y))
+    A, new_f_names = feature_importance(A.values, Y, list(A))
+    return A, Y, range(len(Y)), new_f_names
 
 
 def main():
-    A, Y, _ = get_data()
+    A, Y, _, new_f_names = get_data()
     print("A:", len(A[0]))
     fp_indices = compare_classifiers(A, Y, names, classifiers)
     result = open("result.out", "w")
     print(fp_indices, file=result)
+    result.close()
+    result = open("fearure_names.out","w")
+    for f_n in new_f_names:
+        result.write(f_n+"\n")
     result.close()
     # fp_indices2 = compare_classifiers(A, Y, names, classifiers)
     # fp = open("fp", "w")

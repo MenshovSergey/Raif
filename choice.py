@@ -26,7 +26,7 @@ def rec(k, j, X, Y):
             if effect[i] > 0:
                 new.append(factors[k][i])
         A = union_columns3(X, prefix_for_remove2[k], prefix_for_remove2[k] + "_another", new)
-        A = feature_importance(A.values, Y, list(A))
+        A,_ = feature_importance(A.values, Y, list(A))
         accuracy = compare_classifiers(A, Y, names, classifiers)
         global res
         if accuracy > res:
