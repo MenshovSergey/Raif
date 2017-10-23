@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sklearn.preprocessing as preproccesing
+from sklearn import neighbors
 from sklearn.decomposition import PCA
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.metrics import accuracy_score
@@ -22,6 +23,7 @@ drop_columns = ["bad", "claim_id"]
 
 names = ["AdaBoost"]
 classifiers = [AdaBoostClassifier(random_state=42, n_estimators=100)]
+# classifiers = [neighbors.KNeighborsClassifier(weights="distance", algorithm='kd_tree',n_neighbors=10)]
 
 THRESHOLD_VEH_MODEL = 10
 THRESHOLD_FI = 0.01
@@ -31,7 +33,7 @@ COUNT = 25
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
 prefix_for_remove = ["VEH_model"]
-prefix_for_remove2 = ["Owner_region","VEH_model"]
+prefix_for_remove2 = ["Owner_region", "VEH_model"]
 # factors = [["Москва", "Краснодарский край", "Московская область","Новосибирская область",
 #             "Республика Татарстан (Татарстан)"]]
 factors = [['Ростовская область', 'Москва', 'Волгоградская область', 'Челябинская область', 'Краснодарский край'],
@@ -83,7 +85,7 @@ def union_data(data):
         data = union_columns(data, prefix, prefix + "_another", threshold)
 
     for prefix, factor_data in zip(prefix_for_remove2, factors):
-        data = union_columns2(data, prefix, prefix+"_another", factor_data)
+        data = union_columns2(data, prefix, prefix + "_another", factor_data)
     return data
 
 
@@ -107,15 +109,16 @@ def union_columns3(data, prefix, new_name, main_names):
             else:
                 for i in need:
                     another0[i] = 1
-    #print(len(another0), " ", sum(another0))
-    #print(len(another1), " ", sum(another1))
-    #print("...")
+    # print(len(another0), " ", sum(another0))
+    # print(len(another1), " ", sum(another1))
+    # print("...")
     res = data.drop(drop_pos, 1)
     new_name0 = new_name + "0"
     res[new_name0] = another0
     new_name1 = new_name + "1"
     res[new_name1] = another1
     return res
+
 
 def union_agents(data):
     drop_pos = []
@@ -129,7 +132,7 @@ def union_agents(data):
             for coef in val:
                 for k in range(len(CUT_POINT) - 1):
                     if CUT_POINT[k] <= coef < CUT_POINT[k + 1]:
-                        #val[i] = k
+                        # val[i] = k
                         another[k][i] = 1
                         break
                 i += 1
@@ -140,10 +143,6 @@ def union_agents(data):
             break
     return data
 
-def save(model):
-    f = open("ada","wb")
-    pickle.dump(model, f)
-    f.close()
 
 def read_data():
     data_clean = pd.read_csv("data/all.csv", sep=';', decimal=",")
@@ -177,6 +176,13 @@ def get_FP(y_test, y_pred, y_test_indices):
     return res
 
 
+def save(model):
+    f = open("ada", "wb")
+    import pickle
+    pickle.dump(model, f)
+    f.close()
+
+
 def compare_classifiers(X, Y, names, classifiers):
     indices = range(len(Y))
     X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(X, Y, indices, random_state=50,
@@ -188,6 +194,7 @@ def compare_classifiers(X, Y, names, classifiers):
 
     for name, classifier in zip(names, classifiers):
         classifier.fit(X_train, y_train)
+        save(classifier)
         y_pred = classifier.predict(X_test)
         print(name)
         show_metrics(y_test, y_pred)
@@ -249,7 +256,8 @@ def print_stat(f, stat):
     for k, v in stat.items():
         print(v, file=f)
 
-def get_data():
+
+def read_and_get():
     X, Y, data_clean = read_data()
     X = union_data(X)
     Y = list(Y)
@@ -274,21 +282,32 @@ def get_data():
             remove_indices.append(i)
     Y = Y_cut
     X_norm = X.drop(X.index[remove_indices])
-    X_norm.to_csv("union_filter.csv",sep=",")
+    X_norm.to_csv("union_filter.csv", sep=",")
 
     print("Count object 0 = " + str(count_0))
     print("Count object 1 = " + str(count_1))
 
-    A = union_columns2(X_norm,prefix_for_remove2[0], prefix_for_remove2[0]+"_another", factors[0])
-    A = union_columns3(A, prefix_for_remove2[1], prefix_for_remove2[1]+"_another_car", factors[1])
-    #A = union_agents(A)
+    A = union_columns2(X_norm, prefix_for_remove2[0], prefix_for_remove2[0] + "_another", factors[0])
+    A = union_columns3(A, prefix_for_remove2[1], prefix_for_remove2[1] + "_another_car", factors[1])
+    # A = union_agents(A)
     A = feature_importance(A.values, Y, list(A))
-    A=normalize_data(A)
+    return A, Y
+
+
+def get_data():
+    A, Y = read_and_get()
+    A = normalize_data(A)
     return A, Y, range(len(Y))
+
+
+def get_data_without_normalize():
+    A, Y = read_and_get()
+    return A, Y, range(len(Y))
+
+
 def main():
-    A, Y,_ = get_data()
+    A, Y, _ = get_data()
     fp_indices = compare_classifiers(A, Y, names, classifiers)
     # fp_indices2 = compare_classifiers(A, Y, names, classifiers)
-
 
 # main()
