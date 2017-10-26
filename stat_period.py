@@ -32,21 +32,21 @@ def main():
     p_1 = []
     for v, y in zip(X, Y):
        if y==1:
-           p_1.append((v[0],v[1]))
+           p_1.append((1.0/v[0],1.0/v[1]))
        else:
-           p_0.append((v[0], v[1]))
-    res =np.cov(X.T)
-    res = []
-    for i in range(len(X[0])):
-        res.append([])
-        for j in range(i+1, len(X[0])):
-            resR = pearsonr(X[:,i],X[:,j])
-            res[i].append(resR[0])
+           p_0.append((1.0/v[0], 1.0/v[1]))
+    # res =np.cov(X.T)
+    # res = []
+    # for i in range(len(X[0])):
+    #     res.append([])
+    #     for j in range(i+1, len(X[0])):
+    #         resR = pearsonr(X[:,i],X[:,j])
+    #         res[i].append(resR[0])
 
-    for i in range(len(res)-1):
-        print(max(res[i]))
-    print(res)
-    # visualize(np.asarray(p_0), np.asarray(p_1))
+    # for i in range(len(res)-1):
+    #     print(max(res[i]))
+    # print(res)
+    visualize(np.asarray(p_0), np.asarray(p_1))
     # show_res(y_test, y_pred)
     #
     evcl_0 =[]
@@ -64,4 +64,4 @@ def main():
     stat_evcl.write(str(c_1)+"\n")
     stat_evcl.close()
 
-# main()
+main()

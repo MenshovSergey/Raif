@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sklearn.preprocessing as preproccesing
-from sklearn import neighbors
+from sklearn import neighbors, svm
 from sklearn.decomposition import PCA
-from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
@@ -16,13 +17,13 @@ from sklearn.model_selection import train_test_split
 cat_coulmns = ["Event_type", "Insurer_type", "Owner_region", "Owner_type", "Sales_channel", "VEH_aim_use", "VEH_model",
                "VEH_type_name"]
 drop_columns = ["bad", "claim_id"]
-# names = ["RandomForest", "GBM", "AdaBoost", "SVM", "Dummy"]
-# classifiers = [RandomForestClassifier(random_state=42), GradientBoostingClassifier(random_state=42),
-#                AdaBoostClassifier(random_state=42, n_estimators=100),
-#                svm.SVC(random_state=42), DummyClassifier(random_state=42)]
+names = ["RandomForest", "GBM", "AdaBoost", "SVM", "Dummy"]
+classifiers = [RandomForestClassifier(random_state=42), GradientBoostingClassifier(random_state=42),
+               AdaBoostClassifier(random_state=42, n_estimators=100),
+               svm.SVC(random_state=42), DummyClassifier(random_state=42)]
 
-names = ["AdaBoost"]
-classifiers = [AdaBoostClassifier(random_state=42, n_estimators=100)]
+# names = ["AdaBoost"]
+# classifiers = [AdaBoostClassifier(random_state=42, n_estimators=100)]
 # classifiers = [neighbors.KNeighborsClassifier(weights="distance", algorithm='kd_tree',n_neighbors=10)]
 
 THRESHOLD_VEH_MODEL = 10
@@ -33,9 +34,9 @@ COUNT = 25
 NEW_VEH_MODEL_NAME = "VEH_model_another"
 
 prefix_for_remove = ["VEH_model"]
+# prefix_for_remove2 = ["Owner_region"]
 prefix_for_remove2 = ["Owner_region", "VEH_model"]
-# factors = [["Москва", "Краснодарский край", "Московская область","Новосибирская область",
-#             "Республика Татарстан (Татарстан)"]]
+# factors = [['Ростовская область', 'Москва', 'Волгоградская область', 'Челябинская область', 'Краснодарский край']]
 factors = [['Ростовская область', 'Москва', 'Волгоградская область', 'Челябинская область', 'Краснодарский край'],
            ['MERCEDES', 'BMW', 'AUDI']]
 thresholds = [30]
@@ -120,30 +121,6 @@ def union_columns3(data, prefix, new_name, main_names):
     return res
 
 
-def union_agents(data):
-    drop_pos = []
-    prefix = "Policy_agent_cat"
-    for name_column in list(data):
-        if prefix in name_column:
-            drop_pos.append(name_column)
-            val = list(data.get(name_column))
-            i = 0
-            another = [[0] * len(val)] * (len(CUT_POINT) - 1)
-            for coef in val:
-                for k in range(len(CUT_POINT) - 1):
-                    if CUT_POINT[k] <= coef < CUT_POINT[k + 1]:
-                        # val[i] = k
-                        another[k][i] = 1
-                        break
-                i += 1
-            data = data.drop(name_column, 1)
-            for i in range(len(another)):
-                data["Policy_agent_cat" + str(i)] = another[i]
-            # data["Policy_agent_cat_new"] = val
-            break
-    return data
-
-
 def read_data():
     data_clean = pd.read_csv("data/all.csv", sep=';', decimal=",")
     data = pd.get_dummies(data_clean, columns=cat_coulmns)
@@ -198,7 +175,7 @@ def compare_classifiers(X, Y, names, classifiers):
         y_pred = classifier.predict(X_test)
         print(name)
         show_metrics(y_test, y_pred)
-        return get_FP(y_test, y_pred, indices_test)
+        get_FP(y_test, y_pred, indices_test)
         # print()
 
 
